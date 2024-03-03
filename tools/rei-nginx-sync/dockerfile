@@ -1,0 +1,22 @@
+FROM debian:bookworm-20240110
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt update && apt upgrade -y && \
+    apt install --no-install-recommends --no-install-suggests -y \
+    ca-certificates \
+    git \
+    rsync && \
+    adduser --disabled-password --gecos "" rei && \
+    su rei -c 'cd && \
+        mkdir -p /home/rei/git && \
+        cd /home/rei/git' && \
+    apt autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY sync.sh /usr/local/bin/sync.sh
+RUN chmod +x /usr/local/bin/sync.sh
+
+WORKDIR /home/rei/git
+USER rei
+
+ENTRYPOINT ["sync.sh"]
