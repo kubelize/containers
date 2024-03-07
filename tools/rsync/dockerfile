@@ -6,17 +6,15 @@ RUN apt update && apt upgrade -y && \
     ca-certificates \
     git \
     rsync && \
-    adduser --disabled-password --gecos "" rei && \
-    su rei -c 'cd && \
-        mkdir -p /home/rei/git && \
-        cd /home/rei/git' && \
+    cd && \
+    mkdir -p /home/rsync/git && \
+    cd /home/rsync/git && \
     apt autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-COPY sync.sh /usr/local/bin/sync.sh
-RUN chmod +x /usr/local/bin/sync.sh
+COPY rsync.sh /usr/local/bin/rsync.sh
+RUN chmod +x /usr/local/bin/rsync.sh
 
-WORKDIR /home/rei/git
-USER rei
+WORKDIR /home/rsync/git
 
-ENTRYPOINT ["sync.sh"]
+ENTRYPOINT ["rsync.sh"]
