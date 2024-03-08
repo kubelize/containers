@@ -1,0 +1,21 @@
+FROM debian:bookworm-20240110
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt update && apt upgrade -y && \
+    apt install --no-install-recommends --no-install-suggests -y \
+    ca-certificates \
+    git \
+    npm \
+    locales && \
+    adduser --disabled-password --gecos "" nextra && \
+    su nextra -c "cd && mkdir -p /home/nextra/git" && \
+    apt autoremove -y && \
+    cd /home/nextra/git 
+
+COPY run_server.sh /usr/local/bin/run_server.sh
+RUN chmod +x /usr/local/bin/run_server.sh
+
+WORKDIR /home/nextra/git
+USER nextra
+
+ENTRYPOINT  ["run_server.sh"]
