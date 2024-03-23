@@ -1,0 +1,7 @@
+FROM nginx:mainline
+
+COPY build/nginx.conf /etc/nginx/
+COPY build/metrics.conf /etc/nginx/conf.d/metrics.conf
+COPY build/metrics /usr/share/nginx/html
+COPY build/generate.sh build/jq /usr/local/bin/
+COPY build/docker-entrypoint.sh /
