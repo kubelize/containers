@@ -26,4 +26,4 @@ RUN mkdir -p ~/.steam/sdk64/ && \
     cp /home/steam/Steam/steamapps/common/Steamworks\ SDK\ Redist/linux64/steamclient.so /home/steam/.steam/sdk64/
 
 ENTRYPOINT  ./steamcmd.sh +login anonymous +app_update 2394010 validate +quit && \
-            /home/steam/Steam/steamapps/common/PalServer/PalServer.sh
+            /home/steam/Steam/steamapps/common/PalServer/PalServer.sh/
