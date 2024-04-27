@@ -28,4 +28,4 @@ COPY run_server.sh /usr/local/bin/run_server.sh
 ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType windows +login anonymous +app_update 443030 +quit && \
             export WINEARCH=win64 && \
             export WINEPREFIX=/home/steam/.wine64 && \
-            xvfb-run --auto-servernum wine /home/steam/Steam/steamapps/common/'Conan Exiles Dedicated Server'/ConanSandboxServery.exe -logy
+            xvfb-run --auto-servernum wine /home/steam/Steam/steamapps/common/'Conan Exiles Dedicated Server'/ConanSandboxServery.exe -log
