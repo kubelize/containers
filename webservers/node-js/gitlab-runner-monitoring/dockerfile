@@ -1,0 +1,20 @@
+FROM debian:bookworm-20240110
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt update && apt upgrade -y && \
+    apt install --no-install-recommends --no-install-suggests -y \
+    curl \
+    npm && \
+    adduser --disabled-password --gecos "" runner-monitoring && \
+    su runner-monitoring -c 'cd && \
+        mkdir -p /home/runner-monitoring && \
+        npm init -y && \
+        npm install express'
+
+COPY server.js gitlab-runner-monitoring.sh /home/runner-monitoring/
+COPY entrypoint.sh jq /usr/local/bin/
+
+WORKDIR /home/runner-monitoring
+USER runner-monitoring
+
+ENTRYPOINT ["entrypoint.sh"]
