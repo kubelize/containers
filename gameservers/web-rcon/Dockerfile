@@ -7,12 +7,16 @@ RUN wget -O /usr/local/bin/gotty https://github.com/yudai/gotty/releases/downloa
     tar -C /usr/local/bin -xzf /usr/local/bin/gotty && \
     chmod +x /usr/local/bin/gotty
 
-RUN useradd -m web-rcon
+RUN useradd -m kubelize
 
 COPY rcon /usr/local/bin/rcon
-COPY rcon.yaml /home/web-rcon/rcon.yaml
+COPY rcon.yaml /home/kubelize/rcon.yaml
+COPY bashrc /home/kubelize/.bashrc
 
-USER web-rcon
-WORKDIR /home/web-rcon
+RUN apt remove --purge -y wget && \
+    apt autoremove -y && \
+
+USER kubelize
+WORKDIR /home/kubelize
 
 ENTRYPOINT gotty -w -p 8080 /bin/bash
