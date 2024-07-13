@@ -14,9 +14,11 @@ COPY rcon.yaml /home/kubelize/rcon.yaml
 COPY bashrc /home/kubelize/.bashrc
 
 RUN apt remove --purge -y wget && \
-    apt autoremove -y && \
+    apt autoremove -y
+
+RUN setcap 'cap_net_bind_service=+ep' /usr/local/bin/gotty
 
 USER kubelize
 WORKDIR /home/kubelize
 
-ENTRYPOINT gotty -w -p 8080 /bin/bash
+ENTRYPOINT gotty -w -p 80 /bin/bash

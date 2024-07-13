@@ -23,4 +23,4 @@ RUN apt update && apt upgrade -y && \
 WORKDIR /home/mc/rlcraft_server
 USER mc
 
-ENTRYPOINT /bin/bash
+ENTRYPOINT /usr/bin/java -Xmx4G -jar minecraft_server.jar nogui
