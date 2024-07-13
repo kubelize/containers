@@ -10,8 +10,9 @@ RUN wget -O /usr/local/bin/gotty https://github.com/yudai/gotty/releases/downloa
 RUN useradd -m kubelize
 
 COPY rcon /usr/local/bin/rcon
-COPY rcon.yaml /home/kubelize/rcon.yaml
-COPY bashrc /home/kubelize/.bashrc
+COPY .gotty.crt .gotty.key rcon.yaml .bashrc /home/kubelize/
+
+RUN chown -R kubelize:kubelize /home/kubelize
 
 RUN apt remove --purge -y wget && \
     apt autoremove -y
@@ -21,4 +22,4 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/local/bin/gotty
 USER kubelize
 WORKDIR /home/kubelize
 
-ENTRYPOINT gotty -w -p 80 /bin/bash
+ENTRYPOINT gotty -w -t -p 443 /bin/bash
