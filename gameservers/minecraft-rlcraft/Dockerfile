@@ -8,19 +8,17 @@ RUN apt update && apt upgrade -y && \
     mkdir -p /etc/apt/sources.list.d && \
     mv wtf-bookworm.sources /etc/apt/sources.list.d/ && \
     apt update && apt install -y \
-    unzip \
+    nano \
     openjdk-8-jdk && \
     adduser --disabled-password --gecos "" mc && \
-    su mc -c "cd && \
-        mkdir /home/mc/data && \
-        wget https://cloud.mckensy.xyz/s/66eaLksWEmEALir/download/rlcraft_server.zip && \
-        unzip rlcraft_server.zip && \
-        cd rlcraft_server && \
-        bash -c 'echo eula=true > eula.txt'" && \
-    apt remove -y wget unzip && \
+    su mc -c "mkdir /home/mc/data" && \
+    apt remove -y wget && \
     apt autoremove -y
 
-WORKDIR /home/mc/rlcraft_server
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /home/mc/data/rlcraft_server
 USER mc
 
-ENTRYPOINT /usr/bin/java -Xmx4G -jar minecraft_server.jar nogui
+ENTRYPOINT  /usr/local/bin/entrypoint.sh
