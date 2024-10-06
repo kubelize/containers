@@ -21,5 +21,5 @@ RUN apt update && apt upgrade -y && \
 WORKDIR /home/steam/steamcmd
 USER steam
 
-ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/sdtd/ +login anonymous +app_update 294420 +quit && \
+ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/steamcmd/sdtd/ +login anonymous +app_update 294420 +quit && \
             /home/steam/sdtd/startserver.sh -configfile=serverconfig.xml
