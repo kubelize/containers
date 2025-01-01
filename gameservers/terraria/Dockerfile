@@ -20,7 +20,12 @@ RUN apt update && apt upgrade -y && \
     cd /home/terra/1449/Linux && \
     chmod +x TerrariaServer && chmod +x TerrariaServer.bin.x86_64
 
+COPY build/entrypoint.sh /home/terra/entrypoint.sh
+
+RUN chown -R terra:terra /home/terra/entrypoint.sh && \
+    chmod +x /home/terra/entrypoint.sh
+
 WORKDIR /home/terra/
 USER terra
 
-ENTRYPOINT  /home/terra/1449/Linux/TerrariaServer -config /home/terra/serverconfig.txt
+ENTRYPOINT ./entrypoint.sh
