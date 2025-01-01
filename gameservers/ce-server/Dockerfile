@@ -8,6 +8,7 @@ RUN apt update && apt upgrade -y && \
     curl \
     wine xvfb \
     xauth \
+    nano \
     locales && \
     adduser --disabled-password --gecos "" steam && \
     su steam -c 'cd && \
@@ -23,9 +24,7 @@ RUN apt update && apt upgrade -y && \
 WORKDIR /home/steam/steamcmd
 USER steam
 
-COPY run_server.sh /usr/local/bin/run_server.sh
-
-ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType windows +login anonymous +app_update 443030 +quit && \
+ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType windows +force_install_dir /home/steam/ce-server/ +login anonymous +app_update 443030 +quit && \
             export WINEARCH=win64 && \
             export WINEPREFIX=/home/steam/.wine64 && \
-            xvfb-run --auto-servernum wine /home/steam/Steam/steamapps/common/'Conan Exiles Dedicated Server'/ConanSandboxServery.exe -log
+            xvfb-run --auto-servernum wine /home/steam/ce-server/ConanSandboxServer.exe -log
