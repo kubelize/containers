@@ -18,9 +18,9 @@ RUN apt update && apt upgrade -y && \
     apt remove --purge -y curl && \
     apt autoremove -y && \
     cd /home/terra/1449/Linux && \
-    chmod +x TerrariaServer.bin.x86_64
+    chmod +x TerrariaServer && chmod +x TerrariaServer.bin.x86_64
 
-WORKDIR /home/terra/1449/Linux
+WORKDIR /home/terra/
 USER terra
 
-ENTRYPOINT  ./TerrariaServer.bin.x86_64 -config /home/terra/.local/share/Terraria/ServerConfig.txt
+ENTRYPOINT  /home/terra/1449/Linux/TerrariaServer -config /home/terra/serverconfig.txt
