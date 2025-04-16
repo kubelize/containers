@@ -25,6 +25,7 @@ WORKDIR /home/steam/steamcmd
 USER steam
 
 ENTRYPOINT  /home/steam/steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType windows +force_install_dir /home/steam/ce-server/ +login anonymous +app_update 443030 +quit && \
+            /home/steam/steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType windows +login anonymous +workshop_download_item 440900 3359158426 1113901982 +quit && \
             export WINEARCH=win64 && \
             export WINEPREFIX=/home/steam/.wine64 && \
             xvfb-run --auto-servernum wine /home/steam/ce-server/ConanSandboxServer.exe -log
