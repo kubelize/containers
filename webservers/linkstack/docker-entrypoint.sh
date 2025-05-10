@@ -4,7 +4,6 @@ set -eu
 # Default values
 SERVER_ADMIN="${SERVER_ADMIN:-you@example.com}"
 HTTP_SERVER_NAME="${HTTP_SERVER_NAME:-localhost}"
-HTTPS_SERVER_NAME="${HTTPS_SERVER_NAME:-localhost}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 TZ="${TZ:-UTC}"
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-256M}"
@@ -14,7 +13,6 @@ DEBUG="${DEBUG:-TRUE}"
 # Config override paths (user-writeable)
 CONFIG_DIR="/config"
 APACHE_CONF="${CONFIG_DIR}/apache2/httpd.conf"
-SSL_CONF="${CONFIG_DIR}/apache2/conf.d/ssl.conf"
 PHP_CONF="${CONFIG_DIR}/php82/php.ini"
 
 # Optional debug output
@@ -43,15 +41,6 @@ sed -i 's#Directory "/var/www/localhost/htdocs"#Directory "/htdocs"#g' "$APACHE_
 sed -i 's#AllowOverride None#AllowOverride All#' "$APACHE_CONF"
 sed -i "s#^LogLevel .*#LogLevel ${LOG_LEVEL}#g" "$APACHE_CONF"
 debug_done "$APACHE_CONF" "httpd"
-
-# Apply changes to SSL config
-debug_copy "$SSL_CONF" "ssl"
-sed -i 's#^ErrorLog .*#ErrorLog "logs/ssl-error.log"#g' "$SSL_CONF"
-sed -i "s/^TransferLog .*/#TransferLog \"logs\/ssl-transfer.log\"\nLogLevel ${LOG_LEVEL}/g" "$SSL_CONF"
-sed -i 's#^DocumentRoot ".*#DocumentRoot "/htdocs"#g' "$SSL_CONF"
-sed -i "s/ServerAdmin\ you@example.com/ServerAdmin\ ${SERVER_ADMIN}/" "$SSL_CONF"
-sed -i "s/ServerName\ www.example.com:443/ServerName\ ${HTTPS_SERVER_NAME}/" "$SSL_CONF"
-debug_done "$SSL_CONF" "ssl"
 
 # Apply changes to PHP config
 debug_copy "$PHP_CONF" "php"

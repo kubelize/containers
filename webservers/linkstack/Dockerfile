@@ -5,7 +5,6 @@ LABEL description="LinkStack Docker by kubelize"
 # Setup apache and php
 RUN apk --no-cache --update \
     add apache2 \
-    apache2-ssl \
     curl \
     php82-apache2 \
     php82-bcmath \
@@ -37,16 +36,11 @@ RUN apk --no-cache --update \
     && mkdir /htdocs
 
 # App source
-COPY linkstack /htdocs
+COPY linkstack /htdocs/site
 
 # Default configs into /config
 COPY config/apache2/httpd.conf /config/apache2/httpd.conf
-COPY config/apache2/ssl.conf /config/apache2/conf.d/ssl.conf
 COPY config/php82/php.ini /config/php82/php.ini
-
-# Ownership of certs
-RUN chown apache:apache /etc/ssl/apache2/server.pem \
- && chown apache:apache /etc/ssl/apache2/server.key
 
 # Permissions for htdocs
 RUN chown -R apache:apache /htdocs \
@@ -54,15 +48,15 @@ RUN chown -R apache:apache /htdocs \
  && find /htdocs -type f -print0 | xargs -0 chmod 0644
 
 # Create and fix permissions for override + debug + log dirs
-RUN mkdir -p /config/apache2/conf.d /config/php82 /debug /var/www/logs && \
-    chown -R apache:apache /config /debug /var/www/logs && \
-    chmod -R 0775 /config /debug /var/www/logs
+RUN mkdir -p /config/apache2/conf.d /config/php82 /debug && \
+    chown -R apache:apache /config /debug && \
+    chmod -R 0775 /config /debug
 
 # Entrypoint
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 USER apache:apache
 
-WORKDIR /htdocs
+WORKDIR /htdocs/site
 
 CMD ["docker-entrypoint.sh"]
