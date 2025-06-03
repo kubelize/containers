@@ -36,7 +36,7 @@ RUN apk --no-cache --update \
     && mkdir /htdocs
 
 # App source
-COPY linkstack /htdocs/site
+COPY linkstack /htdocs
 
 # Default configs into /config
 COPY config/apache2/httpd.conf /config/apache2/httpd.conf
@@ -57,6 +57,6 @@ COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 USER apache:apache
 
-WORKDIR /htdocs/site
+WORKDIR /htdocs
 
 CMD ["docker-entrypoint.sh"]
