@@ -4,180 +4,290 @@ This directory contains the configuration and files needed to run a Gomplate-bas
 
 ## Overview
 
-The Gomplate CMP plugin allows ArgoCD to process templates using [gomplate](https://gomplate.ca/), a powerful template renderer that supports multiple data sources including environment variables, files, HTTP endpoints, cloud metadata services, and more.
+The Gomplate CMP plugin allows ArgoCD to process regular YAML files containing [gomplate](https://gomplate.ca/) template syntax, using a `gomplate.yaml` data file for values. This approach is similar to how `subst` works, but uses gomplate's powerful templating engine.
+
+## How It Works
+
+1. **Data File**: Create a `gomplate.yaml` file containing your configuration values
+2. **Templates**: Write regular `.yaml` files with gomplate template syntax
+3. **Processing**: The CMP automatically detects and processes files containing `{{ }}` template expressions
+4. **Output**: Rendered YAML manifests are provided to ArgoCD
 
 ## Files
 
-- `gomplate-cmp.yaml` - ArgoCD CMP configuration for gomplate
-- `Dockerfile.gomplate` - Docker image definition for the gomplate CMP
-- `gomplate-entrypoint.sh` - Entrypoint script with environment setup
-
-## Features
-
-- **Template Discovery**: Automatically detects `.gotmpl` and `.tmpl` files
-- **Config Support**: Supports `gomplate.yaml` or `.gomplate.yaml` configuration files
-- **Environment Integration**: Access to ArgoCD environment variables
-- **Kubernetes Integration**: Automatic service account token and namespace detection
-- **Multiple Data Sources**: Support for AWS, Vault, and other external data sources
-- **Flexible Output**: Processes templates and outputs YAML manifests
+- `cmp.yaml` - ArgoCD CMP configuration for gomplate
+- `Dockerfile` - Docker image definition for the gomplate CMP
+- `entrypoint.sh` - Entrypoint script with environment setup
+- `gomplate.yaml` - Example data file with configuration values
 
 ## Usage
 
-### Template Files
+### 1. Create a Data File
 
-Create template files with `.gotmpl` or `.tmpl` extensions:
-
-```yaml
-# deployment.yaml.gotmpl
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ env.Getenv "ARGOCD_APP_NAME" "myapp" }}
-  namespace: {{ env.Getenv "ARGOCD_APP_NAMESPACE" "default" }}
-spec:
-  replicas: {{ env.Getenv "REPLICAS" "1" | conv.ToInt }}
-  selector:
-    matchLabels:
-      app: {{ env.Getenv "ARGOCD_APP_NAME" "myapp" }}
-  template:
-    metadata:
-      labels:
-        app: {{ env.Getenv "ARGOCD_APP_NAME" "myapp" }}
-    spec:
-      containers:
-      - name: app
-        image: {{ env.Getenv "IMAGE_NAME" }}:{{ env.Getenv "IMAGE_TAG" "latest" }}
-        ports:
-        - containerPort: 8080
-```
-
-### Configuration File
-
-Optionally, create a `gomplate.yaml` configuration file:
+Create a `gomplate.yaml` file in your repository root with your configuration values:
 
 ```yaml
 # gomplate.yaml
-inputFiles:
-  - "templates/*.gotmpl"
-outputMap: |
-  {{ .in | strings.TrimSuffix ".gotmpl" }}
+cluster:
+  name: "my-cluster"
+  environment: "production"
 
-datasources:
-  config:
-    url: file://config.yaml
-  secrets:
-    url: file://secrets.yaml
+settings:
+  defaultingressclass: "nginx"
+  defaultStorageClass: "fast-ssd"
+  
+  ingress:
+    ci_sh_lb_ip: "159.144.252.161"
+    ci_jaa_lb_ip: "159.144.45.65"
+    
+  namespaces:
+    ingress_controllers: "ingress-system"
+    observability: "observability-system"
+    
+  resources:
+    ingress_controller:
+      limits:
+        cpu: "400m"
+        memory: "1024Mi"
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
 
-context:
-  app_name: "{{ env.Getenv \"ARGOCD_APP_NAME\" }}"
-  namespace: "{{ env.Getenv \"ARGOCD_APP_NAMESPACE\" }}"
+apps:
+  nginx_ingress:
+    image: "registry.k8s.io/ingress-nginx/controller"
+    tag: "v1.8.2"
+    replicas: 2
+
+customer:
+  domain: "example.com"
+
+features:
+  waf_enabled: true
+  metrics_enabled: true
 ```
 
-### Environment Variables
+### 2. Create Template Files
 
-The plugin provides access to ArgoCD environment variables and additional data sources:
+Write regular `.yaml` files using gomplate template syntax to reference your data:
 
-#### ArgoCD Variables
-- `ARGOCD_APP_NAME` - Application name
-- `ARGOCD_APP_NAMESPACE` - Target namespace
-- `ARGOCD_APP_REVISION` - Git revision
-- `ARGOCD_APP_SOURCE_PATH` - Source path in repository
-- `ARGOCD_APP_SOURCE_REPO_URL` - Source repository URL
-- `ARGOCD_APP_SOURCE_TARGET_REVISION` - Target revision
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ingress-controller
+  namespace: {{ (datasource "data").settings.namespaces.ingress_controllers }}
+  labels:
+    cluster: {{ (datasource "data").cluster.name }}
+    environment: {{ (datasource "data").cluster.environment }}
+spec:
+  replicas: {{ (datasource "data").apps.nginx_ingress.replicas }}
+  selector:
+    matchLabels:
+      app: nginx-ingress
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress
+    spec:
+      containers:
+      - name: nginx-ingress-controller
+        image: {{ (datasource "data").apps.nginx_ingress.image }}:{{ (datasource "data").apps.nginx_ingress.tag }}
+        resources:
+          limits:
+            cpu: {{ (datasource "data").settings.resources.ingress_controller.limits.cpu | quote }}
+            memory: {{ (datasource "data").settings.resources.ingress_controller.limits.memory | quote }}
+          requests:
+            cpu: {{ (datasource "data").settings.resources.ingress_controller.requests.cpu | quote }}
+            memory: {{ (datasource "data").settings.resources.ingress_controller.requests.memory | quote }}
+```
 
-#### Plugin Variables
-- `GOMPLATE_TIMEOUT` - Template processing timeout (default: 30s)
-- `GOMPLATE_LOG_LEVEL` - Log level (default: info)
-- `GOMPLATE_OUTPUT_DIR` - Output directory (default: current directory)
+```yaml
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress-controller
+  namespace: {{ (datasource "data").settings.namespaces.ingress_controllers }}
+  annotations:
+    lbipam.cilium.io/ips: {{ (datasource "data").settings.ingress.ci_sh_lb_ip }}
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-ingress
+  ports:
+  - port: 80
+    targetPort: 80
+```
 
-#### Kubernetes Integration
-- `GOMPLATE_K8S_TOKEN` - Service account token (auto-detected)
-- `GOMPLATE_K8S_NAMESPACE` - Service account namespace (auto-detected)
+### 3. ArgoCD Application Configuration
+
+Configure your ArgoCD Application to use the gomplate plugin:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/your-org/your-repo
+    path: path/to/manifests
+    targetRevision: main
+    plugin:
+      name: gomplate
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+## Template Syntax
+
+### Basic Value Access
+
+```yaml
+# Access simple values
+storageClass: {{ (datasource "data").settings.defaultStorageClass }}
+
+# Access nested values  
+namespace: {{ (datasource "data").settings.namespaces.ingress_controllers }}
+
+# Quote strings
+domain: {{ (datasource "data").customer.domain | quote }}
+```
+
+### Conditional Logic
+
+```yaml
+{{- if (datasource "data").features.waf_enabled }}
+# WAF configuration
+annotations:
+  nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+{{- end }}
+
+{{- if eq ((datasource "data").cluster.environment) "production" }}
+replicas: 3
+{{- else }}
+replicas: 1
+{{- end }}
+```
+
+### Loops and Iteration
+
+```yaml
+# If you have a list in your data file
+{{- range (datasource "data").ingress_controllers }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-service
+  annotations:
+    lbipam.cilium.io/ips: {{ .lb_ip }}
+{{- end }}
+```
+
+## Local Testing
+
+Test your templates locally before deploying:
+
+```bash
+# Test a single file
+gomplate -d data=./gomplate.yaml -f deployment.yaml
+
+# Test and output to file
+gomplate -d data=./gomplate.yaml -f deployment.yaml -o deployment-rendered.yaml
+
+# Test all files in directory
+find . -name "*.yaml" ! -name "gomplate.yaml" -exec gomplate -d data=./gomplate.yaml -f {} \;
+```
 
 ## Building the Plugin
 
-Build the Docker image:
+Build and push the Docker image:
 
 ```bash
-docker build -f argocd-cmp/Dockerfile.gomplate -t your-registry/gomplate-cmp:latest .
+# Build
+make build
+
+# Push  
+make docker-push
 ```
 
 ## ArgoCD Configuration
 
-Register the plugin in your ArgoCD configuration:
+Add the gomplate CMP to your ArgoCD repo server:
 
 ```yaml
-# argocd-repo-server deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: argocd-repo-server
-spec:
-  template:
-    spec:
-      containers:
-      - name: argocd-repo-server
-        # ... existing configuration
-      - name: gomplate-cmp
-        image: your-registry/gomplate-cmp:latest
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 999
-        volumeMounts:
+# In your ArgoCD Helm values or deployment
+repoServer:
+  extraContainers:
+    - name: gomplate-cmp
+      image: kubelize/gomplate-cmp:latest
+      args:
+        - /var/run/argocd/argocd-cmp-server
+        - --loglevel
+        - info
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+      volumeMounts:
         - name: var-files
           mountPath: /var/run/argocd
         - name: plugins
           mountPath: /home/argocd/cmp-server/plugins
-        - name: tmp
+        - name: gomplate-cmp-tmp
           mountPath: /tmp
+      env:
+        - name: ARGOCD_EXEC_TIMEOUT
+          value: "90s"
+  
+  volumes:
+    - name: gomplate-cmp-tmp
+      emptyDir: {}
 ```
 
-## Examples
+## Key Features
 
-### Simple Template
+- **Simple Setup**: Just add a `gomplate.yaml` data file to your repository
+- **Regular YAML**: Write normal `.yaml` files with template syntax - no special extensions needed  
+- **Powerful Templating**: Full gomplate functionality including conditionals, loops, functions
+- **Data-Driven**: Separate configuration from templates for better maintainability
+- **ArgoCD Integration**: Seamless integration with ArgoCD Applications
+- **Local Testing**: Easy to test templates locally before deployment
 
-```yaml
-# service.yaml.gotmpl
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ env.Getenv "ARGOCD_APP_NAME" }}
-  namespace: {{ env.Getenv "ARGOCD_APP_NAMESPACE" }}
-spec:
-  selector:
-    app: {{ env.Getenv "ARGOCD_APP_NAME" }}
-  ports:
-  - port: {{ env.Getenv "SERVICE_PORT" "80" | conv.ToInt }}
-    targetPort: {{ env.Getenv "TARGET_PORT" "8080" | conv.ToInt }}
-```
+## Migration from Subst
 
-### Advanced Template with External Data
+If you're migrating from `subst`, the pattern is very similar:
 
-```yaml
-# configmap.yaml.gotmpl
-{{- $config := datasource "config" -}}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ env.Getenv "ARGOCD_APP_NAME" }}-config
-  namespace: {{ env.Getenv "ARGOCD_APP_NAMESPACE" }}
-data:
-  {{- range $key, $value := $config }}
-  {{ $key }}: {{ $value | toYAML }}
-  {{- end }}
-```
+1. **Rename**: Rename your `subst.yaml` to `gomplate.yaml`
+2. **Update Syntax**: Change `(( grab $.subst.path ))` to `{{ (datasource "data").path }}`
+3. **Plugin**: Update your ArgoCD Application to use the `gomplate` plugin instead of `subst`
 
 ## Troubleshooting
 
-### Common Issues
+### Template Not Processing
 
-1. **Template Not Found**: Ensure your template files have `.gotmpl` or `.tmpl` extensions
-2. **Environment Variables**: Check that required environment variables are set in ArgoCD
-3. **Permissions**: Verify the CMP container has access to necessary volumes and secrets
+- Ensure `gomplate.yaml` exists in your repository root
+- Check that your YAML files contain `{{ }}` template syntax
+- Verify the ArgoCD Application specifies `plugin: name: gomplate`
+
+### Value Not Found
+
+- Check the path in your data file: `{{ (datasource "data").your.path.here }}`
+- Use `gomplate -d data=./gomplate.yaml -f yourfile.yaml` to test locally
+- Verify YAML structure in your `gomplate.yaml` file
 
 ### Debug Mode
 
-Enable debug logging by setting the environment variable:
+Enable debug logging in the CMP container:
 
 ```yaml
 env:
@@ -185,29 +295,8 @@ env:
   value: debug
 ```
 
-## Data Sources
-
-Gomplate supports many data sources out of the box:
-
-- **Environment Variables**: `env://`
-- **Files**: `file://path/to/file`
-- **HTTP/HTTPS**: `http://` or `https://`
-- **AWS Services**: `aws+smp://`, `aws+s3://`, etc.
-- **Vault**: `vault://`
-- **Consul**: `consul://`
-- **Kubernetes**: Access via service account
-
-Refer to the [Gomplate documentation](https://docs.gomplate.ca/datasources/) for complete data source information.
-
-## Security Considerations
-
-- The plugin runs as a non-root user (uid 999)
-- Sensitive data should be accessed through secure data sources (Vault, Kubernetes secrets)
-- Environment variables containing secrets should be carefully managed
-- Consider using RBAC to limit access to sensitive resources
-
 ## Version Compatibility
 
-- **Gomplate**: v4.1.0 (configurable in Dockerfile)
-- **ArgoCD**: 2.4+
+- **Gomplate**: v4.1.0
+- **ArgoCD**: 3.0+ (tested with 3.0.6)
 - **Kubernetes**: 1.20+
