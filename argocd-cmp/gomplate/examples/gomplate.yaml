@@ -1,0 +1,80 @@
+# Values file for gomplate templating
+# Define all your key-value pairs here that can be referenced in templates
+
+cluster:
+  name: "ci-k42-prod"
+  environment: "production"
+  region: "switzerland"
+  zone: "ci"
+
+settings:
+  defaultingressclass: "nginx"
+  
+  ingress:
+    default_lb_ip: "159.144.252.161"
+    ci_sh_observability_lb_ip: "159.144.252.162"
+    ci_sh_lb_ip: "159.144.252.161"
+    ci_jaa_lb_ip: "159.144.45.65"
+    ci_jaa_sct_preprod_waf_lb_ip: "159.144.45.70"
+    ci_jaa_sct_prod_waf_lb_ip: "159.144.45.71"
+    ci_jaa_sct_preprod_lb_ip: "159.144.45.72"
+    ci_jaa_sct_prod_lb_ip: "159.144.45.73"
+    ci_jaa_bvger_int_lb_ip: "159.144.45.90"
+    
+  networking:
+    cidrs:
+      ci_sh: "159.144.252.160/27"
+      ci_jaa: "159.144.45.64/26"
+    zones:
+      ci_sh: "ci-sh"
+      ci_jaa: "ci-jaa"
+    
+  namespaces:
+    ingress_controllers: "k42-justitia-ingress-controllers"
+    observability: "observability-system"
+    kube_system: "kube-system"
+    
+  resources:
+    ingress_controller:
+      limits:
+        cpu: "400m"
+        memory: "1024Mi"
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+    
+    small:
+      limits:
+        cpu: "200m"
+        memory: "512Mi"
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+        
+    large:
+      limits:
+        cpu: "1000m"
+        memory: "2048Mi"
+      requests:
+        cpu: "500m"
+        memory: "1024Mi"
+
+apps:
+  nginx_ingress:
+    image: "registry.k8s.io/ingress-nginx/controller"
+    tag: "v1.8.2"
+    replicas: 2
+    
+  cert_manager:
+    image: "quay.io/jetstack/cert-manager-controller"
+    tag: "v1.13.0"
+    
+  argocd:
+    image: "quay.io/argoproj/argocd"
+    tag: "v2.8.4"
+    
+features:
+  waf_enabled: true
+  metrics_enabled: true
+  backup_enabled: true
+  monitoring_enabled: true
