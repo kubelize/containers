@@ -1,9 +1,0 @@
-# Values file for gomplate templating
-# Define all your key-value pairs here that can be referenced in templates
-
-settings:
-  defaultingressclass: "nginx"
-  defaultStorageClass: "proxmox"
-  customer:
-    domain: "example.com"
-
